@@ -1,0 +1,137 @@
+<?php
+session_start();
+if (!isset($_SESSION['first_name']) || !isset($_SESSION['last_name'])) {
+    header("Location: index.php");
+    exit();
+}
+
+// Database Connection
+$conn = new mysqli("localhost", "root", "", "gible_accounts");
+$first_name = $conn->real_escape_string($_SESSION['first_name']);
+$last_name = $conn->real_escape_string($_SESSION['last_name']);
+
+// Default values
+$volume = 100;
+$mute = 0;
+$kp = 0;
+$tts_enabled = 0;
+$colorblind_enabled = 0;
+$colorblind_type = null;
+
+// Fetch user settings from DB
+$result = $conn->query("SELECT volume, mute, kp, tts_enabled, colorblind_enabled, colorblind_type 
+                        FROM users WHERE first_name='$first_name' AND last_name='$last_name'");
+
+if ($row = $result->fetch_assoc()) {
+    $volume = intval($row['volume']);
+    $mute = intval($row['mute']);
+    $kp = intval($row['kp']);
+    $tts_enabled = isset($row['tts_enabled']) ? intval($row['tts_enabled']) : 0;
+    $colorblind_enabled = isset($row['colorblind_enabled']) ? intval($row['colorblind_enabled']) : 0;
+
+    // Only set type if colorblind mode is enabled
+    $colorblind_type = ($colorblind_enabled === 1 && !empty($row['colorblind_type']))
+                        ? $row['colorblind_type']
+                        : null;
+}
+$conn->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>English Skills - Lesson 2</title>
+<link rel="stylesheet" href="../../style.css" />
+</head>
+
+<body>
+
+<!-- Navigation Buttons -->
+<div class="nav-buttons2">
+    <a href="../fa.lessons.php" class="speak-on-hover" data-label="Back">BACK</a>
+    <a href="#" onclick="openModal(); return false;" class="speak-on-hover" data-label="Open settings">SETTINGS</a>
+</div>
+
+<!-- Lesson Slider -->
+<div class="lesson-slider">
+    <div class="slider-header speak-on-hover" data-label="English Lesson 2">English Lesson 2</div>
+    <div class="slider-content">
+        <div class="slide" id="slide-box"></div>
+    </div>
+    <div id="next-slide-container"></div>
+    <div class="slider-counter speak-on-hover" id="slide-counter" tabindex="0" aria-label="Slide number"></div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <iframe src="../../settings.php" id="settings-frame" frameborder="0"></iframe>
+    </div>
+</div>
+
+<!-- Audio Elements -->
+<audio id="clickSound" src="../../sfx/click.mp3" preload="auto"></audio>
+<audio id="closeSound" src="../../sfx/close.mp3" preload="auto"></audio>
+<audio id="hoverSound" src="../../sfx/hover.mp3" preload="auto"></audio>
+
+<!-- JS Files -->
+<script src="../../modal.js" defer></script>
+<script src="../../sfx/sfx.js" defer></script>
+<script src="../../settings.js" defer></script>
+<script src="../../slider.js" defer></script>
+
+<!-- Settings Initialization -->
+<script>
+    // settings.js automatically calls settings_load.php on page load
+    window.addEventListener('DOMContentLoaded', function () {
+        const initialVolume = <?php echo $mute === 1 ? 0 : $volume; ?>;
+        const initialMute = <?php echo $mute; ?>;
+        const initialTTS = <?php echo $tts_enabled; ?>;
+        const initialCBEnabled = <?php echo $colorblind_enabled; ?>;
+        const initialCBType = '<?php echo $colorblind_type; ?>';
+
+        // Pass PHP-side defaults to settings.js (for instant setup before AJAX load)
+        if (typeof initSettings === 'function') {
+            initSettings({
+                volume: initialVolume,
+                mute: initialMute,
+                tts: initialTTS,
+                colorblindEnabled: initialCBEnabled,
+                colorblindType: initialCBType
+            });
+        }
+    });
+    </script>
+
+<!-- Main Lesson Slider Script -->
+<script>
+    window.addEventListener('DOMContentLoaded', function () {
+    const slides = [
+        {
+            img: '../../images/English/Lessons/english.lesson2.page1.png',
+            label: "In this lesson, we will learn about: common sight words."
+        },
+        {
+            img: '../../images/English/Lessons/english.lesson2.page2.png',
+            label: "Sight words are words we see and use often when reading. These words are short and easy, and we don’t sound them out, we just remember them."
+        },
+        {
+            img: '../../images/English/Lessons/english.lesson2.page3.png',
+            label: "Sight words help us read simple phrases and sentences faster. Some examples of sight words are: has, may, are, his, her, write, name, some, your, and read."
+        },
+                {
+            img: '../../images/English/Lessons/english.lesson2.page4.png',
+            label: "Here are some more examples of common sight words: here, there, what, where, when, who, yes, no, this, that, they, you, we, me, she, and he."
+        },
+    ];
+
+    if (typeof mountLessonSlider === 'function') {
+        mountLessonSlider({ slides, quizHref: 'english.lesson2.quiz.php' });
+    }
+    });
+    </script>
+
+</body>
+</html>
